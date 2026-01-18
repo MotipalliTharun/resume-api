@@ -1,0 +1,17 @@
+{
+  "type": "object",
+  "required": ["full_name", "summary", "skills_block", "experience_block", "projects_block", "education_block"],
+  "properties": {
+    "full_name": {"type": "string"},
+    "location": {"type": "string"},
+    "phone": {"type": "string"},
+    "email": {"type": "string"},
+    "linkedin": {"type": "string"},
+    "portfolio": {"type": "string"},
+    "summary": {"type": "string"},
+    "skills_block": {"type": "string"},
+    "experience_block": {"type": "string"},
+    "projects_block": {"type": "string"},
+    "education_block": {"type": "string"}
+  }
+}

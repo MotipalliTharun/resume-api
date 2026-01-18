@@ -1,0 +1,37 @@
+Key Responsibilities
+
+Design, develop, test, and maintain Java-based applications using Spring Boot
+Build and support RESTful microservices
+Develop and maintain message-driven components using IBM MQ / ActiveMQ / JMS
+Participate in Agile/Scrum ceremonies (stand-ups, sprint planning, retrospectives)
+Collaborate with QA teams on unit testing and automation
+Troubleshoot, debug, and support applications in QA and production
+Follow coding standards, security guidelines, and best practices
+Assist with deployments and production releases using CI/CD pipelines
+Create and maintain technical documentation
+Required Technical Skills
+Strong proficiency in Java (8+)
+Hands-on experience with Spring Boot
+Experience with messaging technologies:
+IBM MQ / ActiveMQ
+JMS
+Experience with Maven for build and dependency management
+Experience with CI/CD tools: Jenkins
+Source control experience with Git (GitHub, GitLab, or Bitbucket)
+Strong knowledge of Unix/Linux
+Experience deploying applications on Tomcat
+Familiarity with REST, JSON, HTTP
+Experience with relational databases (Oracle, PostgreSQL)
+Nice to Have / Plus Skills
+Experience with Apache Camel or Spring Integration
+UI experience with JavaScript, Node.js, Angular
+Experience with Splunk or Dynatrace
+Container experience with OpenShift or Docker
+AWS cloud exposure
+Understanding of SOLID principles and design patterns
+Qualifications
+Bachelor’s degree in Computer Science, Engineering, or equivalent experience
+4–8+ years of professional Java development experience
+Strong communication and collaboration skills
+Ability to work independently and within cross-functional teams
+

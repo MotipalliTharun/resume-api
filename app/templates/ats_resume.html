@@ -1,0 +1,149 @@
+<!doctype html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <title>{{ full_name }} - Resume</title>
+  <style>
+    @page {
+      size: Letter;
+      margin: 0.75in;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: "Times New Roman", Times, serif;
+      font-size: 10.5pt;
+      line-height: 1.15;
+      color: #000000;
+      margin: 0;
+      padding: 0;
+      background: #fff;
+    }
+
+    /* Header */
+    .header {
+      text-align: center;
+      margin-bottom: 6pt;
+    }
+
+    .header h1 {
+      font-family: inherit;
+      /* Ensure TNR */
+      font-size: 22pt;
+      font-weight: bold;
+      /* text-transform: uppercase; */
+      margin: 0 0 3pt 0;
+      padding: 0;
+      letter-spacing: 0;
+    }
+
+    .contact-info {
+      font-size: 10pt;
+      color: #000;
+      margin: 0;
+    }
+
+    /* Sections */
+    h2 {
+      font-family: inherit;
+      font-size: 12pt;
+      font-weight: bold;
+      text-transform: uppercase;
+      border-bottom: 1pt solid #000;
+      margin: 12pt 0 6pt 0;
+      padding-bottom: 2pt;
+      page-break-after: avoid;
+    }
+
+    /* Content & Lists */
+    p {
+      margin: 0 0 3pt 0;
+      text-align: justify;
+    }
+
+    ul {
+      margin: 0 0 9pt 18pt;
+      /* 0.25" indent */
+      padding: 0;
+      list-style-type: disc;
+    }
+
+    li {
+      margin-bottom: 3pt;
+      text-align: justify;
+      padding-left: 0;
+    }
+
+    /* Ensure bold text is actually bold */
+    strong,
+    b {
+      font-weight: bold;
+      color: #000;
+    }
+
+    /* Links */
+    a {
+      color: #000;
+      text-decoration: none;
+    }
+
+    /* Skills formatting */
+    .skills-list p {
+      margin-bottom: 3pt;
+    }
+
+    /* Print Reset */
+    @media print {
+      body {
+        margin: 0;
+        /* managed by @page */
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="header">
+    <h1>{{ full_name }}</h1>
+    <div class="contact-info">
+      {% if phone %}{{ phone }}{% endif %}
+      {% if email %}{% if phone %} | {% endif %}{{ email }}{% endif %}
+      {% if linkedin %}{% if phone or email %} | {% endif %}{{ linkedin }}{% endif %}
+      {% if location %}{% if phone or email or linkedin %} | {% endif %}{{ location }}{% endif %}
+      {% if portfolio %}{% if phone or email or linkedin or location %} | {% endif %}{{ portfolio }}{% endif %}
+    </div>
+  </div>
+
+  {% if summary %}
+  <h2>PROFESSIONAL SUMMARY</h2>
+  <div>{{ summary | md | safe }}</div>
+  {% endif %}
+
+  {% if skills_block %}
+  <h2>SKILLS</h2>
+  <div class="skills-list">{{ skills_block | md | safe }}</div>
+  {% endif %}
+
+  {% if experience_block %}
+  <h2>PROFESSIONAL EXPERIENCE</h2>
+  <div>{{ experience_block | md | safe }}</div>
+  {% endif %}
+
+  {% if education_block %}
+  <h2>EDUCATION</h2>
+  <div>{{ education_block | md | safe }}</div>
+  {% endif %}
+
+  {% if projects_block %}
+  <h2>PROJECTS</h2>
+  <div>{{ projects_block | md | safe }}</div>
+  {% endif %}
+</body>
+
+</html>

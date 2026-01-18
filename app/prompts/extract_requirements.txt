@@ -1,0 +1,198 @@
+You are an expert ATS (Applicant Tracking System) analyzer and resume optimization specialist. Extract comprehensive information from the job description with precision and depth.
+
+Analyze the following job description and return a detailed JSON structure that captures all critical elements for resume optimization:
+
+EXTRACTION REQUIREMENTS:
+
+1. **Role Information**:
+   - Extract the exact job title
+   - Identify the company name (if mentioned)
+   - Determine the seniority level (Entry, Mid, Senior, Lead, Principal, Executive)
+   - Identify the department/function (Engineering, Marketing, Sales, etc.)
+
+2. **Technical Skills & Technologies**:
+   - Programming languages (with version numbers if specified)
+   - Frameworks and libraries
+   - Tools and platforms
+   - Databases and data technologies
+   - Cloud platforms (AWS, Azure, GCP, etc.)
+   - DevOps/CI-CD tools
+   - Methodologies (Agile, Scrum, Waterfall, etc.)
+
+3. **Hard Skills** (Categorized):
+   - Core technical competencies
+   - Domain-specific expertise
+   - Certifications mentioned or implied
+   - Industry-specific knowledge
+
+4. **Soft Skills**:
+   - Leadership abilities
+   - Communication skills
+   - Collaboration requirements
+   - Problem-solving approaches
+   - Work style preferences
+
+5. **Requirements Analysis**:
+   - **must_have_hard**: Non-negotiable technical skills and qualifications
+   - **must_have_soft**: Required soft skills and attributes
+   - **must_have_experience**: Years of experience, specific role requirements
+   - **must_have_education**: Degree requirements, certifications
+   - **nice_to_have_hard**: Preferred technical skills
+   - **nice_to_have_soft**: Desired soft skills
+   - **nice_to_have_experience**: Bonus experiences or backgrounds
+
+6. **Responsibilities Breakdown**:
+   - Primary responsibilities (core duties)
+   - Secondary responsibilities (supporting duties)
+   - Extract action verbs used (for resume bullet point matching)
+   - Identify measurable outcomes mentioned
+
+7. **Keywords for ATS Optimization**:
+   - **high_priority_keywords**: Terms appearing multiple times or in requirements
+   - **technical_keywords**: All technical terms, acronyms, and tools
+   - **action_verbs**: Verbs used to describe responsibilities
+   - **industry_terms**: Domain-specific jargon and terminology
+   - **buzzwords**: Common industry phrases to include
+
+8. **Context & Culture**:
+   - Company values mentioned
+   - Work environment indicators (remote, hybrid, on-site)
+   - Team structure hints
+   - Growth opportunities mentioned
+
+9. **Quantifiable Metrics**:
+   - Team sizes mentioned
+   - Budget responsibilities
+   - Scale indicators (users, transactions, data volume)
+   - Performance expectations
+
+10. **Resume Optimization Hints**:
+    - Key phrases to mirror in resume bullets
+    - Suggested bullet point structures based on responsibilities
+    - Certification priorities
+    - Experience emphasis areas
+
+---
+
+RETURN FORMAT (JSON):
+
+{
+  "role_metadata": {
+    "role_title": "string",
+    "company": "string or null",
+    "seniority_level": "string",
+    "department": "string",
+    "location": "string or null",
+    "work_arrangement": "string (remote/hybrid/onsite)"
+  },
+  
+  "must_have": {
+    "hard_skills": ["skill1", "skill2"],
+    "soft_skills": ["skill1", "skill2"],
+    "experience_years": "number or range",
+    "specific_experience": ["experience1", "experience2"],
+    "education": ["requirement1", "requirement2"],
+    "certifications": ["cert1", "cert2"]
+  },
+  
+  "nice_to_have": {
+    "hard_skills": ["skill1", "skill2"],
+    "soft_skills": ["skill1", "skill2"],
+    "experience": ["experience1", "experience2"],
+    "certifications": ["cert1", "cert2"]
+  },
+  
+  "technical_stack": {
+    "programming_languages": ["language1 (version)", "language2"],
+    "frameworks_libraries": ["framework1", "framework2"],
+    "tools_platforms": ["tool1", "tool2"],
+    "databases": ["db1", "db2"],
+    "cloud_services": ["service1", "service2"],
+    "devops_tools": ["tool1", "tool2"],
+    "methodologies": ["methodology1", "methodology2"]
+  },
+  
+  "responsibilities": {
+    "primary": [
+      {
+        "responsibility": "string",
+        "action_verbs": ["verb1", "verb2"],
+        "key_skills_used": ["skill1", "skill2"]
+      }
+    ],
+    "secondary": [
+      {
+        "responsibility": "string",
+        "action_verbs": ["verb1", "verb2"],
+        "key_skills_used": ["skill1", "skill2"]
+      }
+    ],
+    "all_action_verbs": ["develop", "design", "implement", "lead"]
+  },
+  
+  "keywords": {
+    "high_priority": ["keyword1", "keyword2"],
+    "technical": ["tech1", "tech2"],
+    "action_verbs": ["verb1", "verb2"],
+    "industry_terms": ["term1", "term2"],
+    "buzzwords": ["phrase1", "phrase2"],
+    "acronyms": ["acronym1 (full form)", "acronym2 (full form)"]
+  },
+  
+  "quantifiable_metrics": {
+    "team_size": "string or null",
+    "budget_scope": "string or null",
+    "scale_indicators": ["indicator1", "indicator2"],
+    "performance_metrics": ["metric1", "metric2"]
+  },
+  
+  "company_culture": {
+    "values": ["value1", "value2"],
+    "work_style": ["style1", "style2"],
+    "growth_opportunities": ["opportunity1", "opportunity2"]
+  },
+  
+  "resume_optimization_guide": {
+    "mirror_phrases": ["exact phrase to use", "another phrase"],
+    "bullet_point_templates": [
+      "[Action verb] + [specific task] + [technology/skill] + resulting in [metric/outcome]",
+      "[Led/Managed] + [team size] + to [achieve specific goal] + using [tools/methods]"
+    ],
+    "emphasis_areas": ["area1", "area2"],
+    "recommended_sections": ["section1", "section2"]
+  },
+  
+  "ats_scoring_factors": {
+    "critical_match_terms": ["term1", "term2"],
+    "frequency_keywords": {
+      "keyword": count
+    },
+    "required_combinations": ["skill1 + skill2", "experience + tool"]
+  }
+}
+
+---
+
+ANALYSIS GUIDELINES:
+
+1. **Be Exhaustive**: Extract every skill, tool, and requirement mentioned
+2. **Preserve Exact Terminology**: Use the exact words/phrases from the JD for ATS matching
+3. **Identify Implicit Requirements**: Infer skills that aren't explicitly stated but are implied
+4. **Prioritize Correctly**: Distinguish between must-have and nice-to-have accurately
+5. **Include Variations**: If "AI" is mentioned, also note "Artificial Intelligence"
+6. **Context Matters**: Note if skills are mentioned in requirements vs. nice-to-have
+7. **Quantify When Possible**: Extract any numbers, percentages, or metrics mentioned
+8. **Action Verb Mapping**: Match responsibilities to strong action verbs for resume bullets
+
+---
+
+JOB DESCRIPTION:
+{{JD_TEXT}}
+
+---
+
+After extraction, provide a brief summary:
+- ATS Keyword Density Score (estimate how keyword-rich this JD is)
+- Top 5 skills to emphasize on resume
+- Top 3 experience areas to highlight
+- Recommended resume sections based on this role

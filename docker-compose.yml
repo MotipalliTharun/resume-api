@@ -1,0 +1,43 @@
+services:
+  api:
+    build:
+      context: ./app
+      dockerfile: Dockerfile
+    image: ${DOCKER_USERNAME:-tharun}/resume-api:latest
+    container_name: resume_api
+    environment:
+      - APP_ENV=prod
+      - DATABASE_URL=postgresql://resume:resume@db:5432/resumeai
+      # User must supply this in .env or environment
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENAI_MODEL=${OPENAI_MODEL:-gpt-4o-mini}
+    volumes:
+      - ./app/_data:/app/_data
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+
+  ui:
+    build: ./frontend
+    image: ${DOCKER_USERNAME:-tharun}/resume-ui:latest
+    container_name: resume_ui
+    ports:
+      - "5173:80"
+    depends_on:
+      - api
+
+  db:
+    image: postgres:16-alpine
+    container_name: resume_db
+    environment:
+      - POSTGRES_USER=resume
+      - POSTGRES_PASSWORD=resume
+      - POSTGRES_DB=resumeai
+    volumes:
+      - pg:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+volumes:
+  pg:
