@@ -11,10 +11,11 @@ async def extract_keywords_with_ai(openai_api_key: str, openai_model: str, jd_te
     prompt = f"""You are an expert ATS (Applicant Tracking System) analyzer. Analyze the following Job Description and extract ONLY the most critical and relevant information.
 
 **(CRITICAL) SURGICAL EXTRACTION RULES:**
-1. **NO GENERIC SKILLS**: Do NOT include broad terms like "Communication", "Leadership", "Teamwork", "Agile", "Scrum", or "Problem Solving" unless specifically asked as a hard requirement certificates.
-2. **HARD TECH ONLY**: Focus strictly on languages, frameworks, cloud services, tools, libraries, protocols, and specific domain terminologies (e.g., "GAAP" for finance, "HIPAA" for health).
-3. **EXACT PHRASING**: Extract terms exactly as they appear in the JD to ensure high keyword match (e.g., "React.js" vs "React", "AWS Lambda" vs "Lambda").
-4. **VERSION SPECIFICITY**: If a version is mentioned (e.g., "Java 17", "Python 3.x"), include it.
+1. **NO GENERIC SKILLS**: Do NOT include broad terms like "Communication", "Leadership", "Teamwork", "Agile", "Scrum", or "Problem Solving" unless specifically asked as a hard requirement.
+2. **HARD TECH ONLY**: Focus strictly on languages, frameworks, cloud services, tools, libraries, protocols, and specific domain terminologies.
+3. **CANONICAL NORMALIZATION**: Convert variations to their standard industry format (e.g., "Springboot" -> "Spring Boot", "ReactJS" -> "React", "NodeJS" -> "Node.js", "Aws" -> "AWS").
+4. **EXACT PHRASING**: If the JD uses a specific valid term, prefer that (e.g., "AWS Lambda" over just "Lambda").
+5. **VERSION SPECIFICITY**: If a version is mentioned (e.g., "Java 17", "Python 3.x"), include it.
 
 **Extract the following:**
 
@@ -28,7 +29,7 @@ async def extract_keywords_with_ai(openai_api_key: str, openai_model: str, jd_te
 
 **Return ONLY valid JSON in this exact format:**
 {
-  "keywords": ["keyword1", "keyword2", ...],
+  "keywords": ["Spring Boot", "React", ...],
   "responsibilities": ["resp1", "resp2", ...]
 }
 

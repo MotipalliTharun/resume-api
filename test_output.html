@@ -3,7 +3,7 @@
 
 <head>
   <meta charset="utf-8">
-  <title>{{ full_name }} - Resume</title>
+  <title>John Doe - Resume</title>
   <style>
     @page {
       size: Letter;
@@ -112,50 +112,43 @@
 
 <body>
   <div class="header">
-    <h1>{{ full_name }}</h1>
+    <h1>John Doe</h1>
     <div class="contact-info">
-      {% if phone %}{{ phone }}{% endif %}
-      {% if email %}{% if phone %} | {% endif %}{{ email }}{% endif %}
-      {% if linkedin %}{% if phone or email %} | {% endif %}{{ linkedin }}{% endif %}
-      {% if location %}{% if phone or email or linkedin %} | {% endif %}{{ location }}{% endif %}
-      {% if portfolio %}{% if phone or email or linkedin or location %} | {% endif %}{{ portfolio }}{% endif %}
+      555-0199
+       | john@example.com
+       | linkedin.com/in/johndoe
+       | New York, NY
+      
     </div>
   </div>
 
-  {% if summary %}
+  
   <h2>SUMMARY</h2>
-  <div>{{ summary | md | safe }}</div>
-  {% endif %}
+  <div><p>Experienced software engineer.</p></div>
+  
 
-  {% if skills_block %}
+  
   <h2>SKILLS</h2>
-  <div class="skills-list">{{ skills_block | md | safe }}</div>
-  {% endif %}
+  <div class="skills-list"><p>Python, HTML, CSS, JavaScript</p></div>
+  
 
-  {% if experience_block %}
+  
   <h2>WORK EXPERIENCE</h2>
-  <div>{{ experience_block | md | safe }}</div>
-  {% endif %}
+  <div><ul>
+<li>Developed a <strong>high-performance</strong> API using Python and Flask.</li>
+<li>Managed a team of 5 engineers.</li>
+<li>Implemented CI/CD pipelines using Jenkins and Docker.</li>
+<li>This is a very long line that should definitely wrap around because it contains a lot of text and we want to see if the CSS handles it correctly without overflowing the container or looking weird with justification issues.</li>
+</ul></div>
+  
 
-  {% if education_block %}
-  <h2>EDUCATION</h2>
-  <div>{{ education_block | md | safe }}</div>
-  {% endif %}
+  
 
-  {% if projects_block %}
-  <h2>PROJECTS</h2>
-  <div>{{ projects_block | md | safe }}</div>
-  {% endif %}
+  
 
-  {% if certifications_block %}
-  <h2>CERTIFICATIONS</h2>
-  <div>{{ certifications_block | md | safe }}</div>
-  {% endif %}
+  
 
-  {% if achievements_block %}
-  <h2>ACHIEVEMENTS</h2>
-  <div>{{ achievements_block | md | safe }}</div>
-  {% endif %}
+  
 </body>
 
 </html>
