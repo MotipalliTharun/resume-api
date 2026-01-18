@@ -15,6 +15,16 @@
 {{ projects_block }}
 {% endif %}
 
+{% if certifications_block %}
+## CERTIFICATIONS
+{{ certifications_block }}
+{% endif %}
+
+{% if achievements_block %}
+## ACHIEVEMENTS
+{{ achievements_block }}
+{% endif %}
+
 ## EDUCATION
 {{ education_block }}
 

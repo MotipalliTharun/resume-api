@@ -144,6 +144,16 @@
   <h2>PROJECTS</h2>
   <div>{{ projects_block | md | safe }}</div>
   {% endif %}
+
+  {% if certifications_block %}
+  <h2>CERTIFICATIONS</h2>
+  <div>{{ certifications_block | md | safe }}</div>
+  {% endif %}
+
+  {% if achievements_block %}
+  <h2>ACHIEVEMENTS</h2>
+  <div>{{ achievements_block | md | safe }}</div>
+  {% endif %}
 </body>
 
 </html>

@@ -79,6 +79,24 @@ async def tailor_stream_endpoint(
     except Exception as e:
         print(f"AI keyword extraction failed: {e}")
     
+    # If any critical contact info is missing, try to extract it from resume via AI
+    if not (full_name.strip() and email.strip() and phone.strip()):
+        try:
+            from services.ai_keyword_service import extract_contact_info_with_ai
+            print("Extracting contact info via AI (filling gaps)...")
+            contact_info = await extract_contact_info_with_ai(settings.openai_api_key, settings.openai_model, resume_text)
+            
+            full_name = full_name or contact_info.get("full_name", "")
+            email = email or contact_info.get("email", "")
+            phone = phone or contact_info.get("phone", "")
+            linkedin = linkedin or contact_info.get("linkedin", "")
+            location = location or contact_info.get("location", "")
+            portfolio = portfolio or contact_info.get("portfolio", "")
+            
+            print(f"Final Contact Info: Name={full_name}, Email={email}, Phone={phone}")
+        except Exception as e:
+            print(f"Contact extraction failed: {e}")
+
     # Fallback to basic extraction only if AI completely fails
     keywords = ai_keywords if ai_keywords else extract_keywords(jd_text)
     kw_score, missing, matched = keyword_coverage_score(resume_text, keywords)

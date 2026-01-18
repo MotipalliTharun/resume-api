@@ -69,4 +69,65 @@ async def extract_keywords_with_ai(openai_api_key: str, openai_model: str, jd_te
             content = content.split("```")[1].split("```")[0].strip()
         
         result = json.loads(content)
-        return result
+
+async def extract_contact_info_with_ai(openai_api_key: str, openai_model: str, resume_text: str) -> dict:
+    """
+    Use OpenAI to extract personal contact details from the resume text.
+    """
+    import httpx
+    
+    prompt = f"""Analyze the above resume text and extract the candidate's personal contact information.
+    
+    Return ONLY valid JSON in this exact format:
+    {{
+      "full_name": "First Last",
+      "email": "email@example.com",
+      "phone": "(123) 456-7890",
+      "linkedin": "linkedin.com/in/...",
+      "location": "City, State",
+      "portfolio": "github.com/..."
+    }}
+    
+    If a field is missing, return an empty string "". 
+    Do NOT invent information.
+    
+    **Resume Text:**
+    {resume_text[:3000]}
+    """
+    
+    headers = {
+        "Authorization": f"Bearer {openai_api_key}",
+        "Content-Type": "application/json"
+    }
+    
+    payload = {
+        "model": openai_model,
+        "messages": [
+            {"role": "system", "content": "You are an expert parser. Extract contact info into JSON."},
+            {"role": "user", "content": prompt}
+        ],
+        "temperature": 0.0,
+        "max_tokens": 500
+    }
+    
+    try:
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            response = await client.post(
+                "https://api.openai.com/v1/chat/completions",
+                headers=headers,
+                json=payload
+            )
+            response.raise_for_status()
+            data = response.json()
+            content = data["choices"][0]["message"]["content"].strip()
+            
+            # Parse JSON
+            if "```json" in content:
+                content = content.split("```json")[1].split("```")[0].strip()
+            elif "```" in content:
+                content = content.split("```")[1].split("```")[0].strip()
+            
+            return json.loads(content)
+    except Exception as e:
+        print(f"AI Contact Extraction Failed: {e}")
+        return {}
