@@ -22,16 +22,6 @@ A powerful, containerized SaaS application that uses AI to surgically tailor res
 - **Database**: PostgreSQL (via Docker)
 - **Containerization**: Docker & Docker Compose
 
-## 🚀 Quick Start (Mac)
-We've included handy scripts to start the app without using the terminal!
-1.  Double-click **`start_app.command`** in the project folder.
-    *   This will start the Docker containers and automatically open the app in your browser at `http://localhost:5173`.
-2.  To stop the app, double-click **`stop_app.command`**.
-
-**(Note: You must have Docker Desktop running first!)**
-
----
-
 ## 📋 Prerequisites
 
 - **Docker Desktop** installed and running.
