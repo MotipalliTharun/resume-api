@@ -7,14 +7,21 @@ from pathlib import Path
 # We'll set up a loader that looks at current directory (root of app).
 import markdown
 
+# Determine absolute path to 'app' directory
+TEMPLATE_ROOT = Path(__file__).resolve().parent.parent
+
 env = Environment(
-    loader=FileSystemLoader("."),
+    loader=FileSystemLoader(str(TEMPLATE_ROOT)),
     autoescape=select_autoescape(enabled_extensions=('html', 'xml'), default_for_string=True)
 )
 
 def md_filter(text):
     if not text:
         return ""
+    # Pre-process: Convert text bullets to markdown bullets
+    # Replace "•" with "-" at start of lines (or anywhere?) 
+    # Usually "• " to "- "
+    text = text.replace("•", "-")
     # Convert markdown to HTML
     return markdown.markdown(text, extensions=['extra', 'nl2br'])
 

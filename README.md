@@ -88,6 +88,10 @@ This will spin up:
 - **Prompts**: Edit `app/prompts/tailor_resume.txt` to change how the AI rewrites the resume (e.g., number of bullet points).
 - **Templates**: Modify `app/templates/ats_resume.html` to change the styling or layout of the generated PDF.
 
+## 🚀 Deployment
+
+For detailed deployment instructions (Local with Docker Compose or Cloud), please refer to [DEPLOYMENT.md](DEPLOYMENT.md).
+
 ## 🐳 Docker Hub Images
 
 The project images are available on Docker Hub:

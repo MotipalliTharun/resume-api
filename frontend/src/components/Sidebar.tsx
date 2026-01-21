@@ -1,10 +1,11 @@
 import { NavLink } from 'react-router-dom';
-import { Home, History, BarChart3, Settings } from 'lucide-react';
+import { Home, History, BarChart3, Settings, FileText } from 'lucide-react';
 
 export function Sidebar() {
     const navItems = [
         { icon: Home, label: 'Resume Tailor', path: '/' },
         { icon: History, label: 'Application Tracker', path: '/tracker' },
+        { icon: FileText, label: 'Cover Letter', path: '/cover-letter' },
         { icon: BarChart3, label: 'Analysis & Stats', path: '/analysis' },
     ];
 

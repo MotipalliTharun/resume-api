@@ -13,6 +13,10 @@ RUN apt-get update && apt-get install -y \
     libharfbuzz-subset0 \
     libjpeg-dev \
     libopenjp2-7-dev \
+    libreoffice-writer \
+    default-jre \
+    fonts-liberation \
+    fonts-dejavu \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .

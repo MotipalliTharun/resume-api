@@ -24,3 +24,20 @@ class TailorRun(Base):
     tailored_text = Column(Text, default="")
     tailored_md = Column(Text, default="")
     tailored_html = Column(Text, default="")
+
+class CoverLetter(Base):
+    __tablename__ = "cover_letters"
+
+    id = Column(Integer, primary_key=True, index=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    job_title = Column(String(256), default="")
+    company = Column(String(256), default="")
+    full_name = Column(String(256), default="YOUR NAME")
+
+    jd_text = Column(Text, nullable=False)
+    resume_text = Column(Text, nullable=False)
+    
+    # The generated content
+    cover_letter_text = Column(Text, default="") # Plain text / MD from LLM
+    cover_letter_html = Column(Text, default="") # Rendered HTML

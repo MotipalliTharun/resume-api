@@ -386,8 +386,14 @@ export function TailorPage() {
                                                         View PDF
                                                     </button>
                                                     <button
+                                                        onClick={() => window.open(`${API_BASE}/runs/${tailorResult?.run_id}/download/docx?name=${(document.getElementById('export-filename') as HTMLInputElement).value}`, '_blank')}
+                                                        className="h-10 bg-blue-50 text-blue-600 rounded-lg text-[10px] font-black uppercase hover:bg-blue-100 transition"
+                                                    >
+                                                        DOCX
+                                                    </button>
+                                                    <button
                                                         onClick={() => window.open(`${API_BASE}/runs/${tailorResult?.run_id}/download/txt?name=${(document.getElementById('export-filename') as HTMLInputElement).value}`, '_blank')}
-                                                        className="h-10 bg-slate-50 text-slate-600 rounded-lg text-[10px] font-black uppercase hover:bg-slate-100 transition"
+                                                        className="h-10 bg-slate-50 text-slate-600 rounded-lg text-[10px] font-black uppercase hover:bg-slate-100 transition col-span-2"
                                                     >
                                                         Download TXT
                                                     </button>
