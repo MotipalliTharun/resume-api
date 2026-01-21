@@ -84,7 +84,54 @@ You will typically deploy two services (API and UI) and one Database.
 5. Run `docker compose up -d`.
 6. (Optional) Set up a reverse proxy (Caddy/Traefik) or standard Nginx on host 80/443 to point to container ports.
 
-## 4. Maintenance
+## 4. AWS EC2 Deployment (Amazon Linux 2023)
+
+We provide a helper script (`ops/setup_ec2.sh`) to automate the environment setup.
+
+### Steps:
+
+1.  **Launch Instance**:
+    - Launch an EC2 instance using **Amazon Linux 2023** AMI.
+    - Ensure Security Group allows ports: `22` (SSH), `80` (HTTP), `8000` (API).
+
+2.  **Connect**:
+    ```bash
+    ssh -i your-key.pem ec2-user@your-ip-address
+    ```
+
+3.  **Setup Environment**:
+    Run the following commands to install Docker and Git:
+    ```bash
+    # Install Git first to clone repo (or upload setup script manually)
+    sudo dnf install -y git
+    
+    # Clone your repo
+    git clone <YOUR_REPO_URL> resume-app
+    cd resume-app
+    
+    # Run Setup Script
+    chmod +x ops/setup_ec2.sh
+    ./ops/setup_ec2.sh
+    ```
+
+4.  **Start Application**:
+    *   **Log out** and **Log back in** (to apply Docker permissions).
+    *   Create your `.env` file:
+        ```bash
+        cd resume-app
+        cp .env.example .env
+        nano .env  # Add your OPENAI_API_KEY
+        ```
+    *   Run Docker Compose:
+        ```bash
+        docker compose up --build -d
+        ```
+
+5.  **Access**:
+    - Frontend: `http://<your-ec2-ip>`
+    - API: `http://<your-ec2-ip>:8000/docs`
+
+## 5. Maintenance
 
 - **Backups**: Periodically backup your Postgres data volume (`pg` volume).
 - **Updates**: `git pull` -> `docker compose up --build -d`.
