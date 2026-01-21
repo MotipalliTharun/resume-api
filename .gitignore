@@ -3,7 +3,7 @@
 .env.local
 .env.*
 !.env.example
-
+My_key.pem
 # OS files
 .DS_Store
 Thumbs.db
