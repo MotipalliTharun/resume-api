@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { ArrowLeft, CheckCircle2, Download, FileText, XCircle } from 'lucide-react';
 
 
-const API_BASE = '/api';
+import { authenticatedFetch, API_BASE } from '../utils/api';
 
 interface ScoreBreakdown {
     keyword_score: number;
@@ -31,7 +31,7 @@ export function AnalysisPage() {
 
     useEffect(() => {
         if (!id) return;
-        fetch(`${API_BASE}/runs/${id}`)
+        authenticatedFetch(`${API_BASE}/runs/${id}`)
             .then(res => res.json())
             .then(data => {
                 setRun(data);

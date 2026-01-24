@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import List
 
-from fastapi import FastAPI, Depends, UploadFile, File, Form, HTTPException
+from fastapi import FastAPI, Depends, UploadFile, File, Form, HTTPException, Header
 from fastapi.responses import StreamingResponse, FileResponse
 from sqlalchemy.orm import Session
 
@@ -14,13 +14,13 @@ from services.score_service import extract_keywords, keyword_coverage_score, ats
 from services.embed_service import embed, cosine_sim
 from services.openai_service import openai_generate, openai_stream
 from services.render_service import render_md, render_html
-from services.render_service import render_md, render_html
 from services.export_service import create_resume_docx
 from services.tailor_service import process_and_save_run, extract_section, update_run_text
 from utils import render_prompt, safe_filename
 from config import settings
 from services.parse_service import parse_via_tika
 from models import CoverLetter
+from auth import verify_access_token
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -50,6 +50,10 @@ DATA_DIR.mkdir(parents=True, exist_ok=True)
 def health():
     return {"status": "ok", "engine": "openai-native"}
 
+@app.post("/auth/verify")
+async def verify_auth_code(authorized: bool = Depends(verify_access_token)):
+    return {"status": "valid"}
+
 @app.post("/tailor-stream")
 async def tailor_stream_endpoint(
     jd_text: str = Form(...),
@@ -63,7 +67,10 @@ async def tailor_stream_endpoint(
     linkedin: str = Form(""),
     portfolio: str = Form(""),
     db: Session = Depends(get_db),
+    authorized: bool = Depends(verify_access_token),
+    x_openai_key: str | None = Header(None, alias="X-OpenAI-Key")
 ):
+    api_key = x_openai_key or settings.openai_api_key
     file_bytes = await resume_file.read()
     # No Tika URL needed anymore
     resume_text = await parse_via_tika(file_bytes, resume_file.filename)
@@ -76,7 +83,7 @@ async def tailor_stream_endpoint(
     ai_responsibilities = []
     try:
         from services.ai_keyword_service import extract_keywords_with_ai
-        ai_result = await extract_keywords_with_ai(settings.openai_api_key, settings.openai_model, jd_text)
+        ai_result = await extract_keywords_with_ai(api_key, settings.openai_model, jd_text)
         ai_keywords = ai_result.get("keywords", [])
         ai_responsibilities = ai_result.get("responsibilities", [])
         ai_responsibilities = ai_result.get("responsibilities", [])
@@ -89,7 +96,7 @@ async def tailor_stream_endpoint(
         try:
             from services.ai_keyword_service import extract_contact_info_with_ai
             print("Extracting contact info via AI (filling gaps)...")
-            contact_info = await extract_contact_info_with_ai(settings.openai_api_key, settings.openai_model, resume_text)
+            contact_info = await extract_contact_info_with_ai(api_key, settings.openai_model, resume_text)
             
             full_name = full_name or contact_info.get("full_name", "")
             email = email or contact_info.get("email", "")
@@ -203,7 +210,7 @@ async def tailor_stream_endpoint(
     async def generate_and_save():
         full_text = ""
         try:
-            gen = openai_stream(settings.openai_api_key, settings.openai_model, prompt)
+            gen = openai_stream(api_key, settings.openai_model, prompt)
 
             async for chunk in gen:
                 full_text += chunk
@@ -271,6 +278,8 @@ async def tailor_stream_endpoint(
 async def analyze(
     jd_text: str = Form(...),
     resume_file: UploadFile = File(...),
+    authorized: bool = Depends(verify_access_token),
+    x_openai_key: str | None = Header(None, alias="X-OpenAI-Key")
 ):
     file_bytes = await resume_file.read()
     # No Tika URL needed
@@ -452,7 +461,10 @@ async def cover_letter_stream_endpoint(
     linkedin: str = Form(""),
     portfolio: str = Form(""),
     db: Session = Depends(get_db),
+    authorized: bool = Depends(verify_access_token),
+    x_openai_key: str | None = Header(None, alias="X-OpenAI-Key")
 ):
+    api_key = x_openai_key or settings.openai_api_key
     file_bytes = await resume_file.read()
     resume_text = await parse_via_tika(file_bytes, resume_file.filename)
     
@@ -472,7 +484,7 @@ async def cover_letter_stream_endpoint(
         full_text = ""
         try:
             # Reusing openai_stream logic
-            gen = openai_stream(settings.openai_api_key, settings.openai_model, prompt)
+            gen = openai_stream(api_key, settings.openai_model, prompt)
 
             async for chunk in gen:
                 full_text += chunk

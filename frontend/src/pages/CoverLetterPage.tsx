@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Upload, FileText, CheckCircle, AlertCircle, Loader2, Download, History } from "lucide-react";
+import { authenticatedFetch, API_BASE } from "../utils/api";
 
 interface CoverLetterRun {
     id: number;
@@ -32,7 +33,7 @@ export function CoverLetterPage() {
 
     const fetchHistory = async () => {
         try {
-            const res = await fetch("http://localhost:8000/cover-letters");
+            const res = await authenticatedFetch("/cover-letters");
             if (res.ok) {
                 const data = await res.json();
                 setHistory(data);
@@ -65,7 +66,7 @@ export function CoverLetterPage() {
         formData.append("portfolio", portfolio);
 
         try {
-            const response = await fetch("http://localhost:8000/cover-letter-stream", {
+            const response = await authenticatedFetch("/cover-letter-stream", {
                 method: "POST",
                 body: formData,
             });
@@ -219,14 +220,14 @@ export function CoverLetterPage() {
                                         {currentRunId === run.id && <span className="ml-2 text-green-600 font-bold">(New)</span>}
                                     </div>
                                     <a
-                                        href={`http://localhost:8000/cover-letters/${run.id}/download/pdf`}
+                                        href={`${API_BASE}/cover-letters/${run.id}/download/pdf`}
                                         className="text-indigo-600 hover:underline text-xs flex items-center gap-1 mt-1"
                                         target="_blank" rel="noreferrer"
                                     >
                                         <Download className="w-3 h-3" /> PDF
                                     </a>
                                     <a
-                                        href={`http://localhost:8000/cover-letters/${run.id}/download/docx`}
+                                        href={`${API_BASE}/cover-letters/${run.id}/download/docx`}
                                         className="text-indigo-600 hover:underline text-xs flex items-center gap-1 mt-1"
                                         target="_blank" rel="noreferrer"
                                     >
@@ -251,7 +252,7 @@ export function CoverLetterPage() {
                             {currentRunId && (
                                 <div className="flex gap-2">
                                     <a
-                                        href={`http://localhost:8000/cover-letters/${currentRunId}/download/pdf`}
+                                        href={`${API_BASE}/cover-letters/${currentRunId}/download/pdf`}
                                         target="_blank"
                                         rel="noreferrer"
                                         className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
@@ -260,7 +261,7 @@ export function CoverLetterPage() {
                                         PDF
                                     </a>
                                     <a
-                                        href={`http://localhost:8000/cover-letters/${currentRunId}/download/docx`}
+                                        href={`${API_BASE}/cover-letters/${currentRunId}/download/docx`}
                                         target="_blank"
                                         rel="noreferrer"
                                         className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
@@ -269,7 +270,7 @@ export function CoverLetterPage() {
                                         DOCX
                                     </a>
                                     <a
-                                        href={`http://localhost:8000/cover-letters/${currentRunId}/download/txt`}
+                                        href={`${API_BASE}/cover-letters/${currentRunId}/download/txt`}
                                         target="_blank"
                                         rel="noreferrer"
                                         className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"

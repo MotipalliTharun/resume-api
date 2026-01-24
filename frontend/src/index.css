@@ -100,3 +100,46 @@
     radial-gradient(at 100% 0%, hsla(339, 49%, 30%, 1) 0, transparent 50%);
   background-attachment: fixed;
 }
+
+/* --- ATS RESUME TEMPLATES --- */
+
+/* Template: Standard */
+.ats-template-standard {
+  font-family: 'Arial', 'Helvetica Neue', sans-serif;
+  background-color: white;
+  padding: 3rem;
+  color: #000000;
+  line-height: 1.5;
+  font-size: 11pt;
+}
+
+/* Template: Modern */
+.ats-template-modern {
+  font-family: 'Inter', sans-serif;
+  background-color: white;
+  padding: 3rem;
+  color: #334155;
+  line-height: 1.6;
+  font-size: 10.5pt;
+  letter-spacing: -0.01em;
+}
+
+.ats-template-modern strong {
+  @apply text-violet-700 font-black;
+}
+
+/* Template: Executive */
+.ats-template-executive {
+  font-family: 'Georgia', 'Cambria', serif;
+  background-color: #fffbf7;
+  /* Very subtle warm tint */
+  padding: 3.5rem;
+  color: #0f172a;
+  line-height: 1.8;
+  font-size: 11.5pt;
+}
+
+.ats-template-executive strong {
+  @apply text-slate-800 uppercase tracking-widest font-bold;
+  border-bottom: 1px solid #e2e8f0;
+}

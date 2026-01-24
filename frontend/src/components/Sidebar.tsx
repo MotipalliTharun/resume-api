@@ -1,7 +1,11 @@
 import { NavLink } from 'react-router-dom';
 import { Home, History, BarChart3, Settings, FileText } from 'lucide-react';
 
-export function Sidebar() {
+interface SidebarProps {
+    onSettingsClick: () => void;
+}
+
+export function Sidebar({ onSettingsClick }: SidebarProps) {
     const navItems = [
         { icon: Home, label: 'Resume Tailor', path: '/' },
         { icon: History, label: 'Application Tracker', path: '/tracker' },
@@ -39,7 +43,7 @@ export function Sidebar() {
             </nav>
 
             <div className="p-4 border-t border-slate-700/50">
-                <button className="flex items-center gap-3 px-3 py-3 w-full rounded-xl text-slate-400 hover:text-slate-100 hover:bg-slate-800/50 transition-all">
+                <button onClick={onSettingsClick} className="flex items-center gap-3 px-3 py-3 w-full rounded-xl text-slate-400 hover:text-slate-100 hover:bg-slate-800/50 transition-all">
                     <Settings className="w-5 h-5" />
                     <span className="hidden md:block font-medium">Settings</span>
                 </button>
