@@ -25,7 +25,7 @@ export function Layout() {
 
     return (
         <div className="flex h-screen bg-[#f8fafc] overflow-hidden font-sans">
-            {!isAuthorized && <AccessModal onSuccess={() => setIsAuthorized(true)} />}
+            {/* {!isAuthorized && <AccessModal onSuccess={() => setIsAuthorized(true)} />} - Global Lock Removed */}
             {showSettings && <SettingsModal onClose={() => setShowSettings(false)} />}
 
             <Sidebar onSettingsClick={() => setShowSettings(true)} />

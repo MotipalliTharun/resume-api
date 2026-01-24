@@ -33,35 +33,33 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
     const handleSaveKeys = async () => {
         setMessage(null);
 
-        // Save OpenAI Key locally
-        if (openAIKey) {
-            setOpenAIKey(openAIKey);
-        } else {
-            localStorage.removeItem('openai_key');
+        // REQUIRE Access Code to be entered and verified to save changes
+        if (!accessCode) {
+            setMessage({ text: "Please enter the Access Code to save changes.", type: "error" });
+            return;
         }
 
-        // Verify Access Code if provided
-        if (accessCode) {
-            try {
-                // Determine if we should clear it first? No, just try to use it.
-                // We need to temporarily use it to verify.
-                const testHeaders = { "X-Access-Token": accessCode };
-                const res = await fetch("/api/auth/verify", { method: "POST", headers: testHeaders });
+        try {
+            const testHeaders = { "X-Access-Token": accessCode };
+            const res = await fetch("/api/auth/verify", { method: "POST", headers: testHeaders });
 
-                if (res.ok) {
-                    setAccessToken(accessCode);
-                    setMessage({ text: "Keys saved & verified successfully!", type: "success" });
-                    setStatus("Authenticated");
-                    setAccessCode("jobhunt"); // clear input for security
+            if (res.ok) {
+                // Verification Successful - Save Settings
+                if (openAIKey) {
+                    setOpenAIKey(openAIKey);
                 } else {
-                    setMessage({ text: "Invalid Access Code. Settings not saved.", type: "error" });
+                    localStorage.removeItem('openai_key');
                 }
-            } catch (e) {
-                setMessage({ text: "Verification failed.", type: "error" });
+
+                setAccessToken(accessCode);
+                setMessage({ text: "Settings saved successfully!", type: "success" });
+                setStatus("Authenticated");
+                setAccessCode(""); // Clear for security after use? Or keep to show Auth? Let's clear.
+            } else {
+                setMessage({ text: "Invalid Access Code. Cannot save changes.", type: "error" });
             }
-        } else {
-            // Just saving OpenAI key
-            setMessage({ text: "Settings saved.", type: "success" });
+        } catch (e) {
+            setMessage({ text: "Verification failed. Connection error.", type: "error" });
         }
     };
 

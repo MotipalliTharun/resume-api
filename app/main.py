@@ -67,7 +67,6 @@ async def tailor_stream_endpoint(
     linkedin: str = Form(""),
     portfolio: str = Form(""),
     db: Session = Depends(get_db),
-    authorized: bool = Depends(verify_access_token),
     x_openai_key: str | None = Header(None, alias="X-OpenAI-Key")
 ):
     api_key = x_openai_key or settings.openai_api_key
@@ -278,7 +277,6 @@ async def tailor_stream_endpoint(
 async def analyze(
     jd_text: str = Form(...),
     resume_file: UploadFile = File(...),
-    authorized: bool = Depends(verify_access_token),
     x_openai_key: str | None = Header(None, alias="X-OpenAI-Key")
 ):
     file_bytes = await resume_file.read()
@@ -461,7 +459,6 @@ async def cover_letter_stream_endpoint(
     linkedin: str = Form(""),
     portfolio: str = Form(""),
     db: Session = Depends(get_db),
-    authorized: bool = Depends(verify_access_token),
     x_openai_key: str | None = Header(None, alias="X-OpenAI-Key")
 ):
     api_key = x_openai_key or settings.openai_api_key
