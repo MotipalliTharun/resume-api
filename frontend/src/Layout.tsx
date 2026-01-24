@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Outlet } from 'react-router-dom';
 import { Sidebar } from './components/Sidebar';
-import { AccessModal } from './components/AccessModal';
+
 import { SettingsModal } from './components/SettingsModal';
 import { getAccessToken } from './utils/api';
 
