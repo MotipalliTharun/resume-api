@@ -1,5 +1,6 @@
 
-export const API_BASE = "/api";
+// export const API_BASE = "/api";
+export const API_BASE = "https://f4lguxbhmrrcqtc4qvcwns74qy0xzpzl.lambda-url.us-west-2.on.aws";
 
 export const getAccessToken = () => localStorage.getItem('access_token');
 export const setAccessToken = (token: string) => localStorage.setItem('access_token', token);

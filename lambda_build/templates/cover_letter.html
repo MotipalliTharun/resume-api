@@ -1,0 +1,101 @@
+<!doctype html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>{{ full_name }} - Cover Letter</title>
+    <style>
+        @page {
+            size: Letter;
+            margin: 0.75in;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: "Times New Roman", Times, serif;
+            font-size: 10.5pt;
+            line-height: 1.15;
+            color: #000;
+            margin: 0;
+            padding: 0;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 6pt;
+            padding-bottom: 0;
+        }
+
+        .header h1 {
+            font-size: 22pt;
+            font-weight: bold;
+            margin: 0 0 3pt 0;
+            text-transform: uppercase;
+        }
+
+        .contact-info {
+            font-size: 10pt;
+            margin-bottom: 12pt;
+        }
+
+        .meta-info {
+            margin-bottom: 12pt;
+        }
+
+        .date {
+            margin-bottom: 12pt;
+        }
+
+        .recipient {
+            margin-bottom: 12pt;
+        }
+
+        .content {
+            text-align: left;
+        }
+
+        p {
+            margin-bottom: 10pt;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="header">
+        <h1>{{ full_name }}</h1>
+        <div class="contact-info">
+            {% if phone %}{{ phone }}{% endif %}
+            {% if email %}{% if phone %} | {% endif %}{{ email }}{% endif %}
+            {% if linkedin %}{% if phone or email %} | {% endif %}{{ linkedin }}{% endif %}
+            {% if location %}{% if phone or email or linkedin %} | {% endif %}{{ location }}{% endif %}
+            {% if portfolio %}{% if phone or email or linkedin or location %} | {% endif %}{{ portfolio }}{% endif %}
+        </div>
+    </div>
+
+    <div class="meta-info">
+        <div class="date">{{ current_date }}</div>
+
+        <!-- Optional Recipient Info if available, otherwise generic -->
+        <div class="recipient">
+            {% if hiring_manager %}
+            {{ hiring_manager }}<br>
+            {% endif %}
+            {% if company %}
+            {{ company }}<br>
+            {% endif %}
+            {% if company_address %}
+            {{ company_address }}
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="content">
+        {{ body_html | safe }}
+    </div>
+
+</body>
+
+</html>

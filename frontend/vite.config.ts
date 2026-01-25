@@ -11,7 +11,7 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        target: 'http://localhost:8000',
+        target: 'https://f4lguxbhmrrcqtc4qvcwns74qy0xzpzl.lambda-url.us-west-2.on.aws/',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api/, ''),
       },
