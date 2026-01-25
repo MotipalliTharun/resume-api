@@ -70,3 +70,5 @@ ops/
 lambda_deployment.zip
 backend_source.zip
 lambda_build/
+*.zip
+
