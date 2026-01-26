@@ -7,11 +7,7 @@ from utils import safe_filename
 
 # Determine DATA_DIR relative to this file
 # This file is in app/services/, so parent.parent is app/
-import os
-if os.environ.get("AWS_LAMBDA_FUNCTION_NAME"):
-    DATA_DIR = Path("/tmp")
-else:
-    DATA_DIR = Path(__file__).resolve().parent.parent / "_data"
+DATA_DIR = Path(__file__).resolve().parent.parent / "_data"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 
 def extract_section(full_text: str, heading: str) -> str:
@@ -102,8 +98,22 @@ def process_and_save_run(
     db.commit()
     db.refresh(run)
 
-    # Artifacts are no longer saved to disk eagerly to save space.
-    # They will be generated on-the-fly if requested via download endpoints.
+    # Save artifacts
+    base = f"run_{run.id}_{safe_filename(run.job_title or 'role')}"
+    (DATA_DIR / f"{base}.txt").write_text(full_text, encoding="utf-8")
+    (DATA_DIR / f"{base}.md").write_text(tailored_md, encoding="utf-8")
+    (DATA_DIR / f"{base}.html").write_text(tailored_html, encoding="utf-8")
+
+    # Save DOCX artifact
+    from services.export_service import create_resume_docx, convert_docx_to_pdf
+    
+    docx_path = DATA_DIR / f"{base}.docx"
+    create_resume_docx(data, str(docx_path))
+    
+    # Generate PDF from DOCX
+    pdf_path = convert_docx_to_pdf(str(docx_path))
+    if pdf_path:
+        print(f"PDF Generated: {pdf_path}")
     
     return run
 
@@ -138,8 +148,24 @@ def update_run_text(db: Session, run: TailorRun, new_text: str):
     db.commit()
     db.refresh(run)
 
-    # Artifacts are no longer saved to disk eagerly.
-    # Download endpoints will handle regeneration.
+    # Overwrite artifacts
+    base = f"run_{run.id}_{safe_filename(run.job_title or 'role')}"
+    (DATA_DIR / f"{base}.txt").write_text(new_text, encoding="utf-8")
+    (DATA_DIR / f"{base}.md").write_text(run.tailored_md, encoding="utf-8")
+    (DATA_DIR / f"{base}.html").write_text(run.tailored_html, encoding="utf-8")
+    
+    # REGENERATE DOCX & PDF
+    from services.export_service import create_resume_docx, convert_docx_to_pdf
+    
+    docx_path = DATA_DIR / f"{base}.docx"
+    # Remove old files to ensure fresh generation (optional but safe)
+    if docx_path.exists(): docx_path.unlink()
+    
+    create_resume_docx(data, str(docx_path))
+    
+    pdf_path = convert_docx_to_pdf(str(docx_path))
+    if pdf_path:
+        print(f"Updated PDF: {pdf_path}")
     
     return run
 
@@ -187,8 +213,40 @@ def process_and_save_cover_letter(
     db.commit()
     db.refresh(cl)
 
-    # Artifacts are no longer saved to disk eagerly.
-    
-    return cl
+    # Save locally
+    base = f"cl_{cl.id}_{safe_filename(cl.company or 'company')}"
+    (DATA_DIR / f"{base}.txt").write_text(full_text, encoding="utf-8")
+    (DATA_DIR / f"{base}.html").write_text(cover_letter_html, encoding="utf-8")
+
+    # Save DOCX
+    # Create simple but formatted DOCX
+    from docx import Document
+    from docx.shared import Pt, Inches
+    from services.export_service import convert_docx_to_pdf, set_run_font
+
+    doc = Document()
+    section = doc.sections[0]
+    section.top_margin = Inches(1)
+    section.bottom_margin = Inches(1)
+    section.left_margin = Inches(1)
+    section.right_margin = Inches(1)
+
+    style = doc.styles['Normal']
+    font = style.font
+    font.name = 'Times New Roman'
+    font.size = Pt(11)
+
+    # Add text line by line
+    for line in full_text.splitlines():
+        p = doc.add_paragraph()
+        p.paragraph_format.space_after = Pt(6)
+        run = p.add_run(line)
+        set_run_font(run, font_name='Times New Roman', font_size=11)
+
+    docx_path = DATA_DIR / f"{base}.docx"
+    doc.save(str(docx_path))
+
+    # Generate PDF
+    convert_docx_to_pdf(str(docx_path))
 
     return cl

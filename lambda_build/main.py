@@ -34,13 +34,17 @@ from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI(title="Resume AI Tailor (SaaS Core)", version="2.0.0", lifespan=lifespan)
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# CORS: Only enable in non-Lambda environments (Localhost)
+# In Lambda, the Function URL settings handle CORS. Adding it here causes "Double CORS" headers.
+import os
+if not os.environ.get("AWS_LAMBDA_FUNCTION_NAME"):
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
 # Determine DATA_DIR relative to this file
 import os

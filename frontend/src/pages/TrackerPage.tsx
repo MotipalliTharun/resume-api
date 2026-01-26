@@ -9,7 +9,7 @@ interface RunHistory {
     created_at: string;
 }
 
-import { authenticatedFetch, API_BASE } from '../utils/api';
+import { authenticatedFetch } from '../utils/api';
 
 export function TrackerPage() {
     const [history, setHistory] = useState<RunHistory[]>([]);
@@ -17,7 +17,7 @@ export function TrackerPage() {
     const navigate = useNavigate();
 
     useEffect(() => {
-        authenticatedFetch(`${API_BASE}/runs`)
+        authenticatedFetch(`/runs`)
             .then(res => res.json())
             .then(data => setHistory(data))
             .catch(err => console.error(err));

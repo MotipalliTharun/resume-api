@@ -19,20 +19,45 @@ from services.tailor_service import process_and_save_run, extract_section, updat
 from utils import render_prompt, safe_filename
 from config import settings
 from services.parse_service import parse_via_tika
-from models import CoverLetter
-from auth import verify_access_token
+from models import CoverLetter, User
+from services.auth_service import get_current_active_user
+from routers import auth, subscription, payment
+
+# ...
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     try:
         Base.metadata.create_all(bind=engine)
+        
+        # Auto-migration for existing tables
+        from sqlalchemy import text, inspect
+        inspector = inspect(engine)
+        if "users" in inspector.get_table_names():
+            columns = [c["name"] for c in inspector.get_columns("users")]
+            with engine.connect() as conn:
+                if "reset_token" not in columns:
+                    print("Migrating: Adding reset_token")
+                    conn.execute(text("ALTER TABLE users ADD COLUMN reset_token VARCHAR(256)"))
+                if "reset_token_expires" not in columns:
+                    print("Migrating: Adding reset_token_expires")
+                    conn.execute(text("ALTER TABLE users ADD COLUMN reset_token_expires TIMESTAMP WITH TIME ZONE"))
+                if "google_id" not in columns:
+                    print("Migrating: Adding google_id")
+                    conn.execute(text("ALTER TABLE users ADD COLUMN google_id VARCHAR(256)"))
+                if "stripe_customer_id" not in columns:
+                    print("Migrating: Adding stripe_customer_id")
+                    conn.execute(text("ALTER TABLE users ADD COLUMN stripe_customer_id VARCHAR(256)"))
+                    conn.execute(text("CREATE INDEX ix_users_stripe_customer_id ON users (stripe_customer_id)"))
+                conn.commit()
     except Exception as e:
         print(f"Startup DB Error (non-fatal): {e}")
     yield
 
 from fastapi.middleware.cors import CORSMiddleware
 
-app = FastAPI(title="Resume AI Tailor (SaaS Core)", version="2.0.0", lifespan=lifespan)
+app = FastAPI(title="CluesStack.io (SaaS Core)", version="2.0.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -42,21 +67,17 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(auth.router)
+app.include_router(subscription.router)
+app.include_router(payment.router)
+
 # Determine DATA_DIR relative to this file
-import os
-if os.environ.get("AWS_LAMBDA_FUNCTION_NAME"):
-    DATA_DIR = Path("/tmp")
-else:
-    DATA_DIR = Path(__file__).resolve().parent / "_data"
+DATA_DIR = Path(__file__).resolve().parent / "_data"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 
 @app.get("/health")
 def health():
     return {"status": "ok", "engine": "openai-native"}
-
-@app.post("/auth/verify")
-async def verify_auth_code(authorized: bool = Depends(verify_access_token)):
-    return {"status": "valid"}
 
 @app.post("/tailor-stream")
 async def tailor_stream_endpoint(
@@ -71,6 +92,7 @@ async def tailor_stream_endpoint(
     linkedin: str = Form(""),
     portfolio: str = Form(""),
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
     x_openai_key: str | None = Header(None, alias="X-OpenAI-Key")
 ):
     api_key = x_openai_key or settings.openai_api_key
@@ -81,6 +103,8 @@ async def tailor_stream_endpoint(
     if len(resume_text.strip()) < 50:
         raise HTTPException(status_code=400, detail="Could not parse resume text.")
 
+    # ... rest of the function remains similar but simplified context ...
+
     # Use AI to extract intelligent keywords and responsibilities
     ai_keywords = []
     ai_responsibilities = []
@@ -89,11 +113,10 @@ async def tailor_stream_endpoint(
         ai_result = await extract_keywords_with_ai(api_key, settings.openai_model, jd_text)
         ai_keywords = ai_result.get("keywords", [])
         ai_responsibilities = ai_result.get("responsibilities", [])
-        ai_responsibilities = ai_result.get("responsibilities", [])
     except Exception as e:
         print(f"AI keyword extraction failed: {e}")
-        ai_result = {} # Ensure it exists for later scope use
-    
+        ai_result = {} 
+
     # If any critical contact info is missing, try to extract it from resume via AI
     if not (full_name.strip() and email.strip() and phone.strip()):
         try:
@@ -107,12 +130,10 @@ async def tailor_stream_endpoint(
             linkedin = linkedin or contact_info.get("linkedin", "")
             location = location or contact_info.get("location", "")
             portfolio = portfolio or contact_info.get("portfolio", "")
-            
-            print(f"Final Contact Info: Name={full_name}, Email={email}, Phone={phone}")
         except Exception as e:
             print(f"Contact extraction failed: {e}")
 
-    # Fallback to basic extraction only if AI completely fails
+    # Fallback to basic extraction
     keywords = ai_keywords if ai_keywords else extract_keywords(jd_text)
     
     # --- WEIGHTED ATS SCORING ---
@@ -123,19 +144,10 @@ async def tailor_stream_endpoint(
     ats_score = 0.0
     
     try:
-        # Prepare input for scoring engine
-        if ai_result and "categories" in ai_result:
-            categorized_input = ai_result["categories"]
-        else:
-            # Fallback if no AI categories
-            categorized_input = {"core_tech": keywords}
-    
+        categorized_input = ai_result.get("categories", {"core_tech": keywords}) if ai_result else {"core_tech": keywords}
         score_result = ATSScoreEngine.calculate_weighted_score(resume_text, categorized_input)
+        kw_score = score_result["total_score"]
         
-        # Extract results
-        kw_score = score_result["total_score"] # This is the main implementation of user's formula
-        
-        # Missing keywords derivation
         all_kws = []
         for klist in categorized_input.values(): all_kws.extend(klist)
         matched_kws = [m["keyword"] for m in score_result["matched_details"]]
@@ -144,8 +156,7 @@ async def tailor_stream_endpoint(
 
     except Exception as e:
         print(f"ATS Scoring Failed: {e}")
-        # Soft fallback
-        kw_score = 50.0 # Default midline
+        kw_score = 50.0 
         missing = []
         matched = []
 
@@ -154,23 +165,15 @@ async def tailor_stream_endpoint(
     except: ats_score = 0.5
 
     try:
-        # No embeddings URL needed
         embs = await embed([jd_text[:2000], resume_text[:2000]])
         sem_score = cosine_sim(embs[0], embs[1])
     except Exception as e:
-        print(f"Embedding failed: {e}")
         sem_score = 0.0
 
-    # Total Score Calculation
-    # User guidelines: "The ATS Score IS the main score."
-    # We heavily weigh the Weighted ATS Score (kw_score) which is now 0-100.
-    
     final_keyword_score = float(kw_score) 
     final_semantic = float(sem_score * 100)
     final_format = float(ats_score * 100)
     
-    # Composite Score (Targeting user's "Final ATS Score" concept)
-    # 80% Keyword Alignment (Weighted), 15% Semantic, 5% Formatting
     total = round(
         (0.80 * final_keyword_score) + 
         (0.15 * final_semantic) + 
@@ -178,27 +181,19 @@ async def tailor_stream_endpoint(
         1
     )
 
-    # Include AI-extracted responsibilities in the prompt
     responsibilities_text = "\n".join([f"- {r}" for r in ai_responsibilities[:10]]) if ai_responsibilities else "N/A"
     
-    # Format Missing Keywords (Categorized if available)
-    input_missing_text = ", ".join(missing[:50]) # Default fallback
+    input_missing_text = ", ".join(missing[:50])
     
     if ai_result and "categories" in ai_result:
         cats = ai_result["categories"]
         lines = []
-        # Categories to prioritize
         order = ["core_tech", "frameworks", "architecture", "cloud", "domain", "soft_skills"]
-        
         for cat in order:
             kws = cats.get(cat, [])
-            # Intersect with 'missing' to only suggest what is LACKING
-            # (or should we reinforce ALL criticals? Prompt says "MISSING_KEYWORDS". Sticking to missing.)
             relevant = [k for k in kws if k in missing]
             if relevant:
-                 # e.g. "**Core Tech**: Java, Python"
                  lines.append(f"**{cat.replace('_', ' ').title()}**: {', '.join(relevant)}")
-        
         if lines:
             input_missing_text = "\n".join(lines)
 
@@ -218,40 +213,14 @@ async def tailor_stream_endpoint(
             async for chunk in gen:
                 full_text += chunk
                 yield chunk
-
-            # Extract Categories for Prompt
-            # ai_result was captured in outer scope, we need to pass it here or re-access ?
-            # Ideally we pass 'categorized_keywords' into render_prompt
             
-            # Since ai_result is in outer scope, let's fix the pipeline to pass it down
-            # constructing missing keywords string with categories if available
-            missing_text = ""
-            if ai_result and "categories" in ai_result:
-                cats = ai_result["categories"]
-                lines = []
-                for cat, kws in cats.items():
-                    # Filter kws to only those in 'missing' list to save tokens/focus?
-                    # Or just list widely. User wants "Extract ALL".
-                    # Let's verify overlap with 'missing' calculated by coverage score?
-                    # Actually, for the "Missing Keywords" section in prompt, we should list the ones the candidate LACKS.
-                    
-                    # Intersect category kws with 'missing' list
-                    relevant = [k for k in kws if k in missing]
-                    if relevant:
-                        lines.append(f"**{cat.replace('_', ' ').title()}**: {', '.join(relevant)}")
-                
-                missing_text = "\n".join(lines)
-            
-            if not missing_text:
-                missing_text = ", ".join(missing[:50])
-
             ctx = {
                 "full_name": full_name, "location": location, "phone": phone, "email": email,
                 "linkedin": linkedin, "portfolio": portfolio, "job_title": job_title, "company": company,
                 "jd_text": jd_text, "resume_text": resume_text, "kw_score": kw_score, "sem_score": sem_score,
-                "ats_score": ats_score, "total": total, "missing": missing,
-                "missing_text_formatted": missing_text # New Context Variable
+                "ats_score": ats_score, "total": total, "missing": missing
             }
+            # Note: process_and_save_run assumes anonymous user for now, but we can update it later to link user_id
             run = process_and_save_run(db, full_text, ctx)
 
             meta = {
@@ -281,10 +250,10 @@ async def tailor_stream_endpoint(
 async def analyze(
     jd_text: str = Form(...),
     resume_file: UploadFile = File(...),
+    current_user: User = Depends(get_current_active_user),
     x_openai_key: str | None = Header(None, alias="X-OpenAI-Key")
 ):
     file_bytes = await resume_file.read()
-    # No Tika URL needed
     resume_text = await parse_via_tika(file_bytes, resume_file.filename)
 
     keywords = extract_keywords(jd_text)
@@ -292,11 +261,9 @@ async def analyze(
     ats_score = ats_format_score(resume_text)
 
     try:
-        # No embeddings URL needed
         embs = await embed([jd_text[:2000], resume_text[:2000]])
         sem_score = cosine_sim(embs[0], embs[1])
     except Exception as e:
-        print(f"Embedding failed: {e}")
         sem_score = 0.0
 
     total = round(0.45 * kw_score + 0.45 * sem_score + 0.10 * ats_score, 4)
@@ -463,6 +430,7 @@ async def cover_letter_stream_endpoint(
     linkedin: str = Form(""),
     portfolio: str = Form(""),
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
     x_openai_key: str | None = Header(None, alias="X-OpenAI-Key")
 ):
     api_key = x_openai_key or settings.openai_api_key

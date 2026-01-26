@@ -8,11 +8,11 @@ export default {
     theme: {
         extend: {
             colors: {
-                primary: "#8B5CF6",
+                primary: "#2563EB",
                 secondary: "#06B6D4",
                 accent: "#F43F5E",
                 light: {
-                    bg: "#F8FAFC",
+                    bg: "#FFFFFF",
                     card: "#FFFFFF",
                     text: "#1E293B",
                     sub: "#64748B",

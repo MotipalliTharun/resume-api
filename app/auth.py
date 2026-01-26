@@ -1,24 +1,15 @@
 from fastapi import Header, HTTPException, Depends
-import bcrypt
+from passlib.context import CryptContext
 from config import settings
 import secrets
 
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
 def verify_password(plain_password, hashed_password):
-    if not hashed_password:
-        return False
-    # bcrypt.checkpw requires bytes
-    try:
-        return bcrypt.checkpw(
-            plain_password.encode('utf-8'), 
-            hashed_password.encode('utf-8')
-        )
-    except Exception as e:
-        print(f"Auth Error: {e}")
-        return False
+    return pwd_context.verify(plain_password, hashed_password)
 
 def get_password_hash(password):
-    # Generates a bcrypt hash
-    return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+    return pwd_context.hash(password)
 
 async def verify_access_token(x_access_token: str = Header(None, alias="X-Access-Token")):
     """

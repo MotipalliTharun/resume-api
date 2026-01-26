@@ -5,12 +5,11 @@ services:
       dockerfile: Dockerfile
     image: ${DOCKER_USERNAME:-tharun}/resume-api:latest
     container_name: resume_api
+    env_file:
+      - .env
     environment:
       - APP_ENV=prod
-      - DATABASE_URL=postgresql://resume:resume@db:5432/resumeai
-      # User must supply this in .env or environment
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - OPENAI_MODEL=${OPENAI_MODEL:-gpt-4o-mini}
+      # Overrides or additional vars if needed
     volumes:
       - ./app:/app
       - ./app/_data:/app/_data
