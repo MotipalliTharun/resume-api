@@ -321,8 +321,15 @@ function ResultCard({ result }: { result: BatchResult }) {
 export function BatchPage() {
   const [jobs, setJobs] = useState<JobEntry[]>([makeEmpty()]);
   const [resumeFile, setResumeFile] = useState<File | null>(null);
-  const [username, setUsername] = useState(() => localStorage.getItem('username') || 'candidate');
-  const [fullName, setFullName] = useState(() => localStorage.getItem('fullName') || '');
+  const [username, setUsername]   = useState(() => localStorage.getItem('username')    || 'candidate');
+  const [fullName, setFullName]   = useState(() => localStorage.getItem('fullName')    || '');
+  const [email, setEmail]         = useState(() => localStorage.getItem('b_email')     || '');
+  const [phone, setPhone]         = useState(() => localStorage.getItem('b_phone')     || '');
+  const [linkedin, setLinkedin]   = useState(() => localStorage.getItem('b_linkedin')  || '');
+  const [location, setLocation]   = useState(() => localStorage.getItem('b_location')  || '');
+  const [portfolio, setPortfolio] = useState(() => localStorage.getItem('b_portfolio') || '');
+  const [showContact, setShowContact] = useState(false);
+
   const [results, setResults] = useState<BatchResult[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [progress, setProgress] = useState('');
@@ -394,6 +401,15 @@ export function BatchPage() {
     setProgress(`Tailoring ${validJobs.length} resume${validJobs.length > 1 ? 's' : ''} — this may take 1-2 min...`);
 
     try {
+      // Persist contact fields so they survive page refresh
+      localStorage.setItem('username',    username);
+      localStorage.setItem('fullName',    fullName);
+      localStorage.setItem('b_email',     email);
+      localStorage.setItem('b_phone',     phone);
+      localStorage.setItem('b_linkedin',  linkedin);
+      localStorage.setItem('b_location',  location);
+      localStorage.setItem('b_portfolio', portfolio);
+
       const fd = new FormData();
       fd.append('resume_file', resumeFile);
       fd.append('jobs_json', JSON.stringify(
@@ -401,11 +417,13 @@ export function BatchPage() {
           job_title, company, jd_text, job_url: job_url || null,
         }))
       ));
-      fd.append('username', username);
+      fd.append('username',  username);
       fd.append('full_name', fullName);
-
-      localStorage.setItem('username', username);
-      localStorage.setItem('fullName', fullName);
+      fd.append('email',     email);
+      fd.append('phone',     phone);
+      fd.append('linkedin',  linkedin);
+      fd.append('location',  location);
+      fd.append('portfolio', portfolio);
 
       const res = await authenticatedFetch('/job-ops/tailor-batch', { method: 'POST', body: fd });
 
@@ -487,7 +505,8 @@ export function BatchPage() {
       <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-8">
         <h2 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-6">Step 1 — Candidate Info & Base Resume</h2>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+        {/* ── Row 1: username + full name ── */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
           <div className="flex flex-col gap-1.5">
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
               Username <span className="text-slate-300 font-medium normal-case">(used in filename)</span>
@@ -500,12 +519,12 @@ export function BatchPage() {
               className="h-11 px-4 rounded-xl bg-slate-50 border border-slate-200 text-sm font-medium outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-50 transition-all"
             />
             <p className="text-[10px] text-slate-400">
-              Files will be named: <code className="text-violet-600">{username || 'username'}_job-title_resume.docx</code>
+              Files: <code className="text-violet-600">{username || 'username'}_job-title_resume.docx</code>
             </p>
           </div>
           <div className="flex flex-col gap-1.5">
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-              Full Name <span className="text-slate-300 font-medium normal-case">(appears on resume)</span>
+              Full Name <span className="text-slate-300 font-medium normal-case">(printed on resume)</span>
             </label>
             <input
               type="text"
@@ -515,6 +534,51 @@ export function BatchPage() {
               className="h-11 px-4 rounded-xl bg-slate-50 border border-slate-200 text-sm font-medium outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-50 transition-all"
             />
           </div>
+        </div>
+
+        {/* ── Contact details (collapsible) ── */}
+        <div className="mb-6">
+          <button
+            type="button"
+            onClick={() => setShowContact(v => !v)}
+            className="flex items-center gap-2 text-[11px] font-black text-slate-500 hover:text-violet-600 uppercase tracking-widest transition-colors"
+          >
+            <span className={`transition-transform ${showContact ? 'rotate-90' : ''}`}>▶</span>
+            Contact Details — phone, email, LinkedIn
+            {!email && !phone && (
+              <span className="ml-2 px-2 py-0.5 bg-amber-50 text-amber-600 border border-amber-200 rounded-full text-[9px] font-black normal-case tracking-normal">
+                Fill in to guarantee contact info on resume
+              </span>
+            )}
+            {(email || phone) && (
+              <span className="ml-2 px-2 py-0.5 bg-emerald-50 text-emerald-600 border border-emerald-200 rounded-full text-[9px] font-black normal-case tracking-normal">
+                ✓ set
+              </span>
+            )}
+          </button>
+
+          {showContact && (
+            <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {[
+                { label: 'Email',     value: email,     set: setEmail,     placeholder: 'you@email.com',              type: 'email' },
+                { label: 'Phone',     value: phone,     set: setPhone,     placeholder: '+1 (555) 000-0000',          type: 'tel'  },
+                { label: 'LinkedIn',  value: linkedin,  set: setLinkedin,  placeholder: 'linkedin.com/in/yourname',   type: 'text' },
+                { label: 'Location',  value: location,  set: setLocation,  placeholder: 'City, State',               type: 'text' },
+                { label: 'Portfolio', value: portfolio, set: setPortfolio, placeholder: 'github.com/yourname',        type: 'text' },
+              ].map(({ label, value, set, placeholder, type }) => (
+                <div key={label} className="flex flex-col gap-1">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{label}</label>
+                  <input
+                    type={type}
+                    value={value}
+                    onChange={e => set(e.target.value)}
+                    placeholder={placeholder}
+                    className="h-10 px-4 rounded-xl bg-slate-50 border border-slate-200 text-sm font-medium outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-50 transition-all"
+                  />
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Resume upload */}

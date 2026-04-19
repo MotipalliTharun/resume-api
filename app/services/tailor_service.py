@@ -58,21 +58,53 @@ def process_and_save_run(
         print(f"Normalization Error (non-fatal): {e}")
     # ------------------------------------------
 
+    # --- CONTACT INFO RESOLUTION ---
+    # Priority 1: explicit fields passed from the form
+    # Priority 2: contact_info_block pre-extracted by caller
+    # Priority 3: extract PERSONAL DETAILS directly from the AI-generated text
+    #             (the AI was instructed to copy it verbatim from the base resume)
+    contact_block = run_context.get("contact_info_block", "")
+    if not contact_block:
+        contact_block = extract_section(full_text, "PERSONAL DETAILS")
+
+    # If we still have individual fields, prefer them for rendering clarity
+    location  = run_context.get("location", "")
+    phone     = run_context.get("phone", "")
+    email     = run_context.get("email", "")
+    linkedin  = run_context.get("linkedin", "")
+    portfolio = run_context.get("portfolio", "")
+
+    # If individual fields are all empty but we have the raw block, try to
+    # parse the key values out of it so both render paths are covered.
+    if contact_block and not (phone or email):
+        import re as _re
+        if not email:
+            m = _re.search(r'[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}', contact_block)
+            if m: email = m.group(0)
+        if not phone:
+            m = _re.search(r'(\+?\d[\d\s\-().]{7,}\d)', contact_block)
+            if m: phone = m.group(0).strip()
+        if not linkedin:
+            m = _re.search(r'linkedin\.com/in/[a-zA-Z0-9_\-]+', contact_block, _re.IGNORECASE)
+            if m: linkedin = m.group(0)
+    # -----------------------------------------------------------------------
+
     data = {
-        "full_name": run_context.get("full_name") or "YOUR NAME",
-        "location": run_context.get("location") or "",
-        "phone": run_context.get("phone") or "",
-        "email": run_context.get("email") or "",
-        "linkedin": run_context.get("linkedin") or "",
-        "portfolio": run_context.get("portfolio") or "",
-        "summary": extract_section(full_text, "SUMMARY"),
-        "skills_block": extract_section(full_text, "SKILLS"),
-        "experience_block": extract_section(full_text, "WORK EXPERIENCE"),
-        "projects_block": extract_section(full_text, "PROJECTS"), 
-        "certifications_block": extract_section(full_text, "CERTIFICATIONS"),
-        "achievements_block": extract_section(full_text, "ACHIEVEMENTS"), 
-        "volunteer_block": extract_section(full_text, "VOLUNTEER"),
-        "education_block": extract_section(full_text, "EDUCATION"),
+        "full_name":             run_context.get("full_name") or "YOUR NAME",
+        "contact_info_block":    contact_block,
+        "location":              location,
+        "phone":                 phone,
+        "email":                 email,
+        "linkedin":              linkedin,
+        "portfolio":             portfolio,
+        "summary":               extract_section(full_text, "SUMMARY"),
+        "skills_block":          extract_section(full_text, "SKILLS"),
+        "experience_block":      extract_section(full_text, "WORK EXPERIENCE"),
+        "projects_block":        extract_section(full_text, "PROJECTS"),
+        "certifications_block":  extract_section(full_text, "CERTIFICATIONS"),
+        "achievements_block":    extract_section(full_text, "ACHIEVEMENTS"),
+        "volunteer_block":       extract_section(full_text, "VOLUNTEER"),
+        "education_block":       extract_section(full_text, "EDUCATION"),
     }
 
     tailored_md = render_md("templates/ats_resume.md", data)
