@@ -18,12 +18,16 @@ MATCH_WEIGHTS = {
 }
 
 # Category Weights for Final Score
+# Weights sum to 1.0 — tuned to target 96%+ when candidate is well-matched
 CATEGORY_WEIGHTS = {
-    "core_tech": 0.35,
-    "frameworks": 0.25,
-    "architecture": 0.20,
-    "domain": 0.15,
-    "soft_skills": 0.05
+    "core_tech": 0.30,
+    "frameworks": 0.20,
+    "architecture": 0.15,
+    "cloud": 0.10,
+    "databases": 0.10,
+    "tools": 0.08,
+    "domain": 0.05,
+    "soft_skills": 0.02,
 }
 
 class ATSScoreEngine:

@@ -12,6 +12,7 @@ import { TrackerPage } from './pages/TrackerPage';
 import { AnalysisPage } from './pages/AnalysisPage';
 import { SubscriptionPage } from './pages/SubscriptionPage';
 import { SubscriptionSuccessPage } from './pages/SubscriptionSuccessPage';
+import { BatchPage } from './pages/BatchPage';
 import './App.css';
 
 const RequireAuth = ({ children }: { children: React.ReactNode }) => {
@@ -51,6 +52,7 @@ export default function App() {
           {/* Protected Routes (Dashboard) */}
           <Route path="/app" element={<RequireAuth><Layout /></RequireAuth>}>
             <Route index element={<TailorPage />} />
+            <Route path="batch" element={<BatchPage />} />
             <Route path="tracker" element={<TrackerPage />} />
             <Route path="cover-letter" element={<CoverLetterPage />} />
             <Route path="analysis/:id" element={<AnalysisPage />} />

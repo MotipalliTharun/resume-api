@@ -9,19 +9,19 @@ from sqlalchemy.orm import Session
 
 from db import get_db, engine, Base
 from models import TailorRun
-from schemas import TailorResponse, AnalyzeResponse, RunUpdateRequest
+from schemas import TailorResponse, AnalyzeResponse, RunUpdateRequest, BatchJobInput, BatchTailorResult
 from services.score_service import extract_keywords, keyword_coverage_score, ats_format_score, top_requirements
 from services.embed_service import embed, cosine_sim
 from services.openai_service import openai_generate, openai_stream
 from services.render_service import render_md, render_html
 from services.export_service import create_resume_docx
 from services.tailor_service import process_and_save_run, extract_section, update_run_text
-from utils import render_prompt, safe_filename
+from utils import render_prompt, safe_filename, build_resume_filename
 from config import settings
 from services.parse_service import parse_via_tika
 from models import CoverLetter, User
 from services.auth_service import get_current_active_user
-from routers import auth, subscription, payment
+from routers import auth, subscription, payment, job_ops
 
 # ...
 
@@ -50,6 +50,11 @@ async def lifespan(app: FastAPI):
                     print("Migrating: Adding stripe_customer_id")
                     conn.execute(text("ALTER TABLE users ADD COLUMN stripe_customer_id VARCHAR(256)"))
                     conn.execute(text("CREATE INDEX ix_users_stripe_customer_id ON users (stripe_customer_id)"))
+                
+                # Auto-authorize all users per user request
+                # Auto-authorize all users per user request
+                print("Setting all users to active and 'pro' tier...")
+                conn.execute(text("UPDATE users SET is_active = 1, subscription_tier = 'pro'"))
                 conn.commit()
     except Exception as e:
         print(f"Startup DB Error (non-fatal): {e}")
@@ -70,6 +75,7 @@ app.add_middleware(
 app.include_router(auth.router)
 app.include_router(subscription.router)
 app.include_router(payment.router)
+app.include_router(job_ops.router)
 
 # Determine DATA_DIR relative to this file
 DATA_DIR = Path(__file__).resolve().parent / "_data"
@@ -95,7 +101,7 @@ async def tailor_stream_endpoint(
     current_user: User = Depends(get_current_active_user),
     x_openai_key: str | None = Header(None, alias="X-OpenAI-Key")
 ):
-    api_key = x_openai_key or settings.openai_api_key
+    api_key = x_openai_key if x_openai_key and x_openai_key not in ["null", "undefined", ""] else settings.openai_api_key
     file_bytes = await resume_file.read()
     # No Tika URL needed anymore
     resume_text = await parse_via_tika(file_bytes, resume_file.filename)
@@ -170,14 +176,16 @@ async def tailor_stream_endpoint(
     except Exception as e:
         sem_score = 0.0
 
-    final_keyword_score = float(kw_score) 
+    final_keyword_score = float(kw_score)
     final_semantic = float(sem_score * 100)
     final_format = float(ats_score * 100)
-    
+
+    # Weighted scoring: keyword coverage dominates (ATS is primarily keyword matching)
+    # Targets: keyword ≥ 92, semantic ≥ 80, format ≥ 90 → total ≥ 96
     total = round(
-        (0.80 * final_keyword_score) + 
-        (0.15 * final_semantic) + 
-        (0.05 * final_format), 
+        (0.85 * final_keyword_score) +
+        (0.10 * final_semantic) +
+        (0.05 * final_format),
         1
     )
 
@@ -188,14 +196,26 @@ async def tailor_stream_endpoint(
     if ai_result and "categories" in ai_result:
         cats = ai_result["categories"]
         lines = []
-        order = ["core_tech", "frameworks", "architecture", "cloud", "domain", "soft_skills"]
+        order = ["core_tech", "frameworks", "architecture", "cloud", "databases", "tools", "domain", "soft_skills"]
         for cat in order:
             kws = cats.get(cat, [])
             relevant = [k for k in kws if k in missing]
             if relevant:
-                 lines.append(f"**{cat.replace('_', ' ').title()}**: {', '.join(relevant)}")
+                lines.append(f"**{cat.replace('_', ' ').title()}**: {', '.join(relevant)}")
         if lines:
             input_missing_text = "\n".join(lines)
+
+    # Build ALL JD keywords list (not just missing) so the prompt can maximize coverage
+    all_jd_keywords_text = ""
+    if ai_result and "categories" in ai_result:
+        cats = ai_result["categories"]
+        all_lines = []
+        order = ["core_tech", "frameworks", "architecture", "cloud", "databases", "tools", "domain", "soft_skills"]
+        for cat in order:
+            kws = cats.get(cat, [])
+            if kws:
+                all_lines.append(f"**{cat.replace('_', ' ').title()}**: {', '.join(kws)}")
+        all_jd_keywords_text = "\n".join(all_lines)
 
     prompt = render_prompt(
         "prompts/tailor_resume.txt",
@@ -329,17 +349,17 @@ async def download_run(run_id: int, fmt: str, name: str = "", mode: str = "attac
     if not run:
         raise HTTPException(status_code=404, detail="Run not found")
 
-    # Determine filename
+    # Determine filename using standardized convention
     if name:
         clean_name = safe_filename(name)
-        # Recursively strip literal extension to be safe (e.g. .pdf.pdf)
         suffix = f".{fmt}".lower()
         while clean_name.lower().endswith(suffix):
             clean_name = clean_name[:-len(suffix)]
         filename = f"{clean_name}.{fmt}"
     else:
-        base = safe_filename(run.full_name or "Tailored")
-        filename = f"{base}_Resume.{fmt}"
+        # Use: <username>_<job-title-slug>_resume.<fmt>
+        username_slug = safe_filename((run.full_name or "candidate").lower().replace(" ", "_"))
+        filename = build_resume_filename(username_slug, run.job_title or "resume", fmt)
 
     base_name = f"run_{run.id}_{safe_filename(run.job_title or 'role')}"
     
@@ -415,6 +435,167 @@ async def download_run(run_id: int, fmt: str, name: str = "", mode: str = "attac
     
     raise HTTPException(status_code=400, detail="Invalid format")
 
+# --- Batch Tailoring Endpoint ---
+
+@app.post("/tailor-batch", response_model=List[BatchTailorResult])
+async def tailor_batch_endpoint(
+    resume_file: UploadFile = File(...),
+    jobs_json: str = Form(...),           # JSON array of BatchJobInput objects
+    username: str = Form("candidate"),
+    full_name: str = Form(""),
+    location: str = Form(""),
+    phone: str = Form(""),
+    email: str = Form(""),
+    linkedin: str = Form(""),
+    portfolio: str = Form(""),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+    x_openai_key: str | None = Header(None, alias="X-OpenAI-Key")
+):
+    """
+    Batch-tailor one base resume against multiple job descriptions.
+    Generates a uniquely named DOCX for each job.
+    File naming: <username>_<job-title-slug>_resume.docx
+    """
+    import json as _json
+    api_key = x_openai_key if x_openai_key and x_openai_key not in ["null", "undefined", ""] else settings.openai_api_key
+    file_bytes = await resume_file.read()
+    resume_text = await parse_via_tika(file_bytes, resume_file.filename)
+
+    if len(resume_text.strip()) < 50:
+        raise HTTPException(status_code=400, detail="Could not parse resume text.")
+
+    # Parse job list
+    try:
+        raw_jobs = _json.loads(jobs_json)
+        jobs = [BatchJobInput(**j) for j in raw_jobs]
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Invalid jobs_json: {e}")
+
+    if not jobs:
+        raise HTTPException(status_code=400, detail="No jobs provided.")
+
+    # Extract contact info if not supplied
+    if not (full_name.strip() and email.strip()):
+        try:
+            from services.ai_keyword_service import extract_contact_info_with_ai
+            contact_info = await extract_contact_info_with_ai(api_key, settings.openai_model, resume_text)
+            full_name = full_name or contact_info.get("full_name", "")
+            email = email or contact_info.get("email", "")
+            phone = phone or contact_info.get("phone", "")
+            linkedin = linkedin or contact_info.get("linkedin", "")
+            location = location or contact_info.get("location", "")
+            portfolio = portfolio or contact_info.get("portfolio", "")
+        except Exception:
+            pass
+
+    results: List[BatchTailorResult] = []
+
+    for job in jobs:
+        try:
+            # Extract keywords for this JD
+            ai_result = {}
+            try:
+                from services.ai_keyword_service import extract_keywords_with_ai
+                ai_result = await extract_keywords_with_ai(api_key, settings.openai_model, job.jd_text)
+            except Exception:
+                pass
+
+            keywords = ai_result.get("keywords", extract_keywords(job.jd_text))
+            ai_responsibilities = ai_result.get("responsibilities", [])
+
+            # Score base resume against JD
+            from services.score_service import ATSScoreEngine
+            categorized_input = ai_result.get("categories", {"core_tech": keywords}) if ai_result else {"core_tech": keywords}
+            score_result = ATSScoreEngine.calculate_weighted_score(resume_text, categorized_input)
+            kw_score = score_result["total_score"]
+
+            all_kws = []
+            for klist in categorized_input.values():
+                all_kws.extend(klist)
+            matched_kws = [m["keyword"] for m in score_result["matched_details"]]
+            missing = list(set(all_kws) - set(matched_kws))
+
+            try:
+                embs = await embed([job.jd_text[:2000], resume_text[:2000]])
+                sem_score = cosine_sim(embs[0], embs[1])
+            except Exception:
+                sem_score = 0.0
+
+            ats_score = ats_format_score(resume_text)
+
+            total = round((0.85 * kw_score) + (0.10 * sem_score * 100) + (0.05 * ats_score * 100), 1)
+
+            # Build prompt
+            responsibilities_text = "\n".join([f"- {r}" for r in ai_responsibilities[:10]]) if ai_responsibilities else "N/A"
+            missing_text = ", ".join(missing[:50])
+            if ai_result and "categories" in ai_result:
+                cats = ai_result["categories"]
+                lines = []
+                for cat in ["core_tech", "frameworks", "architecture", "cloud", "databases", "tools", "domain", "soft_skills"]:
+                    kws = cats.get(cat, [])
+                    relevant = [k for k in kws if k in missing]
+                    if relevant:
+                        lines.append(f"**{cat.replace('_', ' ').title()}**: {', '.join(relevant)}")
+                if lines:
+                    missing_text = "\n".join(lines)
+
+            prompt = render_prompt(
+                "prompts/tailor_resume.txt",
+                JD_TEXT=job.jd_text,
+                RESUME_TEXT=resume_text,
+                MISSING_KEYWORDS=missing_text,
+                RESPONSIBILITIES=responsibilities_text
+            )
+
+            # Generate tailored text (non-streaming for batch)
+            full_text = await openai_generate(api_key, settings.openai_model, prompt)
+
+            ctx = {
+                "full_name": full_name, "location": location, "phone": phone, "email": email,
+                "linkedin": linkedin, "portfolio": portfolio,
+                "job_title": job.job_title, "company": job.company,
+                "jd_text": job.jd_text, "resume_text": resume_text,
+                "kw_score": kw_score, "sem_score": sem_score,
+                "ats_score": ats_score, "total": total, "missing": missing
+            }
+            run = process_and_save_run(db, full_text, ctx)
+
+            # Rename DOCX to username convention
+            filename = build_resume_filename(username, job.job_title, "docx")
+            base = f"run_{run.id}_{safe_filename(run.job_title or 'role')}"
+            src_docx = DATA_DIR / f"{base}.docx"
+            dest_docx = DATA_DIR / filename
+            if src_docx.exists() and src_docx != dest_docx:
+                import shutil
+                shutil.copy2(str(src_docx), str(dest_docx))
+
+            results.append(BatchTailorResult(
+                job_title=job.job_title,
+                company=job.company,
+                run_id=run.id,
+                filename=filename,
+                total_score=total,
+                missing_keywords=missing[:20],
+                status="success"
+            ))
+
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            results.append(BatchTailorResult(
+                job_title=job.job_title,
+                company=job.company,
+                run_id=-1,
+                filename="",
+                total_score=0.0,
+                missing_keywords=[],
+                status="error",
+                error=str(e)
+            ))
+
+    return results
+
 # --- Cover Letter Endpoints ---
 
 @app.post("/cover-letter-stream")
@@ -433,7 +614,7 @@ async def cover_letter_stream_endpoint(
     current_user: User = Depends(get_current_active_user),
     x_openai_key: str | None = Header(None, alias="X-OpenAI-Key")
 ):
-    api_key = x_openai_key or settings.openai_api_key
+    api_key = x_openai_key if x_openai_key and x_openai_key not in ["null", "undefined", ""] else settings.openai_api_key
     file_bytes = await resume_file.read()
     resume_text = await parse_via_tika(file_bytes, resume_file.filename)
     

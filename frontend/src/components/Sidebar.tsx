@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import { Home, History, BarChart3, Settings, FileText, LogOut, Zap } from 'lucide-react';
+import { Home, History, BarChart3, Settings, FileText, LogOut, Zap, Layers } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 interface SidebarProps {
@@ -11,6 +11,7 @@ export function Sidebar({ onSettingsClick }: SidebarProps) {
 
     const navItems = [
         { icon: Home, label: 'Resume Tailor', path: '/app' },
+        { icon: Layers, label: 'Batch Generator', path: '/app/batch' },
         { icon: History, label: 'Application Tracker', path: '/app/tracker' },
         { icon: FileText, label: 'Cover Letter', path: '/app/cover-letter' },
         { icon: BarChart3, label: 'Analysis & Stats', path: '/app/analysis' },

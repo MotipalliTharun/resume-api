@@ -23,6 +23,22 @@ class AnalyzeResponse(BaseModel):
 class RunUpdateRequest(BaseModel):
     tailored_text: str
 
+class BatchJobInput(BaseModel):
+    job_title: str
+    company: str
+    jd_text: str
+    job_url: Optional[str] = None
+
+class BatchTailorResult(BaseModel):
+    job_title: str
+    company: str
+    run_id: int
+    filename: str
+    total_score: float
+    missing_keywords: List[str]
+    status: str  # "success" | "error"
+    error: Optional[str] = None
+
 # Auth Schemas
 class UserBase(BaseModel):
     email: str

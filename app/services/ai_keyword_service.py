@@ -53,62 +53,66 @@ class HybridKeywordExtractor:
     async def ai_extract_and_categorize(openai_api_key: str, openai_model: str, jd_text: str) -> Dict[str, Any]:
         """
         Step 5 & 7: Semantic Expansion & Categorization via LLM.
+        Enhanced for 96%+ ATS alignment — extracts explicit, implied, and contextual keywords.
         """
-        prompt = f"""You are a Gold-Standard CV Keyword Extractor. 
-Analyze the Job Description below and extract technical skills into these 6 buckets.
+        prompt = f"""You are an elite ATS Keyword Intelligence System trained on 100,000+ job descriptions.
+Your output will be used to achieve a 96%+ ATS keyword match score for a candidate's resume.
 
-**RULES:**
-1. **EXTRACT ALL** explicit technical keywords.
-2. **NO HALLUCINATION**: precise terms only.
-3. **EXACT SPELLING**: Keep JD's casing/punctuation (e.g. "ReactJS").
-4. **INFER HIDDEN SKILLS**: (e.g. "Event-Driven" -> includes "Kafka" only if strongly implied, else just "Event-Driven").
+Analyze the Job Description below with EXHAUSTIVE precision.
+
+**EXTRACTION RULES (Critical — follow exactly):**
+1. EXTRACT EVERY technical keyword, tool, technology, methodology, and domain term — no matter how minor.
+2. PRESERVE EXACT CASING from the JD (e.g. "ReactJS" not "reactjs", "Node.js" not "nodejs").
+3. EXTRACT IMPLIED KEYWORDS: If JD says "build REST APIs", extract "REST APIs", "RESTful", "API development".
+4. EXTRACT VARIATIONS: If JD says "microservices", also extract "microservices architecture", "distributed systems".
+5. EXTRACT VERSIONS if mentioned: "Java 17", "Python 3.10", "Spring Boot 3.x".
+6. DO NOT fabricate keywords not supported by the JD text.
+7. RESPONSIBILITIES: Extract top 8 most critical technical duties — use the JD's exact phrasing.
 
 **CATEGORIES:**
-1. **Core Tech**: Languages & Core Platforms (Java, Python, Node.js)
-2. **Frameworks**: Libs & Tools (Spring Boot, React, Pandas)
-3. **Architecture**: Concepts (Microservices, REST, CI/CD)
-4. **Cloud/Infra**: (AWS, Docker, K8s, Terraform)
-5. **Domain**: Industry terms (Payments, HL7, KYC, SaaS)
-6. **Soft/Behavioral**: (Agile, Leadership - ONLY if critical)
+1. **core_tech**: Programming languages, runtimes, core platforms (Java, Python, Node.js, Go, TypeScript)
+2. **frameworks**: Libraries, frameworks, SDKs (Spring Boot, React, FastAPI, Hibernate, Pandas, TensorFlow)
+3. **architecture**: Design patterns & concepts (Microservices, REST, GraphQL, Event-Driven, CI/CD, TDD, SOLID)
+4. **cloud**: Cloud platforms, DevOps tools, infrastructure (AWS, GCP, Azure, Docker, Kubernetes, Terraform, Jenkins)
+5. **domain**: Industry/business domain terms (Fintech, Payments, HL7, KYC, SaaS, E-commerce, HIPAA, PCI-DSS)
+6. **soft_skills**: ONLY include if the JD explicitly lists them as requirements (Agile, Scrum, Cross-functional, Leadership)
+7. **databases**: Database technologies extracted separately for accuracy (PostgreSQL, MongoDB, Redis, Elasticsearch, MySQL)
+8. **tools**: Monitoring, testing, collaboration tools (Datadog, Splunk, Jira, Kafka, RabbitMQ, Selenium, Jest, JUnit)
 
-**Return valid JSON:**
+**Return ONLY valid JSON (no markdown, no explanation):**
 {{
-  "core_tech": ["..."],
-  "frameworks": ["..."],
-  "architecture": ["..."],
-  "cloud": ["..."],
-  "domain": ["..."],
-  "soft_skills": ["..."],
-  "responsibilities": ["Top 5 critical technical duties..."]
+  "core_tech": ["exact keyword from JD", ...],
+  "frameworks": ["exact keyword from JD", ...],
+  "architecture": ["exact keyword from JD", ...],
+  "cloud": ["exact keyword from JD", ...],
+  "domain": ["exact keyword from JD", ...],
+  "soft_skills": ["exact keyword from JD", ...],
+  "databases": ["exact keyword from JD", ...],
+  "tools": ["exact keyword from JD", ...],
+  "responsibilities": ["Top 8 critical technical duties using JD's exact phrasing...", ...]
 }}
 
 **Job Description:**
-{jd_text[:4000]}
+{jd_text[:5000]}
 """
-        headers = {
-            "Authorization": f"Bearer {openai_api_key}",
-            "Content-Type": "application/json"
-        }
-        payload = {
-            "model": openai_model,
-            "messages": [{"role": "system", "content": "Extract keywords JSON."}, {"role": "user", "content": prompt}],
-            "temperature": 0.1,
-            "max_tokens": 1000
-        }
-        
         try:
-            async with httpx.AsyncClient(timeout=30.0) as client:
-                resp = await client.post("https://api.openai.com/v1/chat/completions", headers=headers, json=payload)
-                resp.raise_for_status()
-                content = resp.json()["choices"][0]["message"]["content"]
+            from openai import AsyncOpenAI
+            client = AsyncOpenAI(api_key=openai_api_key)
+            resp = await client.chat.completions.create(
+                model=openai_model,
+                messages=[{"role": "system", "content": "Extract keywords JSON."}, {"role": "user", "content": prompt}],
+                temperature=0.1,
+                max_tokens=1000
+            )
+            content = resp.choices[0].message.content
+            
+            # Parse JSON
+            if "```json" in content:
+                content = content.split("```json")[1].split("```")[0].strip()
+            elif "```" in content:
+                content = content.split("```")[1].split("```")[0].strip()
                 
-                # Parse JSON
-                if "```json" in content:
-                    content = content.split("```json")[1].split("```")[0].strip()
-                elif "```" in content:
-                    content = content.split("```")[1].split("```")[0].strip()
-                    
-                return json.loads(content)
+            return json.loads(content)
         except Exception as e:
             print(f"AI Extraction Failed: {e}")
             return {}
@@ -159,6 +163,8 @@ async def extract_keywords_with_ai(openai_api_key: str, openai_model: str, jd_te
         "cloud": set(ai_data.get("cloud") or []),
         "domain": set(ai_data.get("domain") or []),
         "soft_skills": set(ai_data.get("soft_skills") or []),
+        "databases": set(ai_data.get("databases") or []),
+        "tools": set(ai_data.get("tools") or []),
     }
     
     # Add regex words to 'core_tech' if not present (simple fallback bucket)
@@ -239,26 +245,24 @@ async def extract_contact_info_with_ai(openai_api_key: str, openai_model: str, r
     {resume_text}
     """
     
-    payload = {
-        "model": openai_model,
-        "messages": [{"role": "user", "content": prompt}],
-        "temperature": 0
-    }
-
     try:
-        async with httpx.AsyncClient(timeout=15.0) as client:
-            resp = await client.post("https://api.openai.com/v1/chat/completions", headers=headers, json=payload)
-            data = resp.json()
-            content = data["choices"][0]["message"]["content"]
-            
-            # Robust JSON extraction
-            import re
-            json_match = re.search(r'\{.*\}', content, re.DOTALL)
-            ai_data = {}
-            if json_match:
-                ai_data = json.loads(json_match.group(0))
-            else:
-                ai_data = json.loads(content) # Fallback to raw try
+        from openai import AsyncOpenAI
+        client = AsyncOpenAI(api_key=openai_api_key)
+        resp = await client.chat.completions.create(
+            model=openai_model,
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0
+        )
+        content = resp.choices[0].message.content
+        
+        # Robust JSON extraction
+        import re
+        json_match = re.search(r'\{.*\}', content, re.DOTALL)
+        ai_data = {}
+        if json_match:
+            ai_data = json.loads(json_match.group(0))
+        else:
+            ai_data = json.loads(content) # Fallback to raw try
             
             # --- HYBRID BACKUP: REGEX ENRICHMENT ---
             # If AI missed email/phone, try regex on the raw text
